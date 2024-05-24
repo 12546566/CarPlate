@@ -6,77 +6,78 @@ import HyperLPRLite as pr
 import threading
 import datetime
 
-
+# 从照片中识别车牌
 def recognize_from_photo(file_path, model):
-    image = cv2.imread(file_path)
-    results = model.SimpleRecognizePlateByE2E(image)
+    image = cv2.imread(file_path)  # 读取图像文件
+    results = model.SimpleRecognizePlateByE2E(image)  # 使用模型识别车牌
     return results
 
-
+# 从视频中识别车牌
 def recognize_from_video(video_path, model, stop_event, display_results):
-    cap = cv2.VideoCapture(video_path)
-    cv2.namedWindow('Video Recognition', cv2.WINDOW_NORMAL)
+    cap = cv2.VideoCapture(video_path)  # 打开视频文件
+    cv2.namedWindow('Video Recognition', cv2.WINDOW_NORMAL)  # 创建窗口显示视频识别过程
 
     while cap.isOpened() and not stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
             break
 
-        results = model.SimpleRecognizePlateByE2E(frame)
+        results = model.SimpleRecognizePlateByE2E(frame)  # 使用模型识别车牌
         for result in results:
             plate, confidence, rect, color = result
             x1, y1, x2, y2 = rect
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)  # 画车牌边框
             cv2.putText(frame, f"{plate} {color} {confidence:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.9, (0, 255, 0), 2)
-            display_results([result])
+                        0.9, (0, 255, 0), 2)  # 显示车牌号、颜色和置信度
+            display_results([result])  # 显示识别结果
 
-        cv2.imshow('Video Recognition', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow('Video Recognition', frame)  # 显示视频帧
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # 按下'q'键退出
             break
-        if cv2.getWindowProperty('Video Recognition', cv2.WND_PROP_VISIBLE) < 1:
+        if cv2.getWindowProperty('Video Recognition', cv2.WND_PROP_VISIBLE) < 1:  # 关闭窗口时退出
             stop_event.set()
             break
 
     cap.release()
     cv2.destroyAllWindows()
 
-
+# 从摄像头中实时识别车牌
 def recognize_from_camera(model, stop_event, display_results):
-    cap = cv2.VideoCapture(0)
-    cv2.namedWindow('Camera Recognition', cv2.WINDOW_NORMAL)
+    cap = cv2.VideoCapture(0)  # 打开摄像头
+    cv2.namedWindow('Camera Recognition', cv2.WINDOW_NORMAL)  # 创建窗口显示实时识别过程
 
     while cap.isOpened() and not stop_event.is_set():
         ret, frame = cap.read()
         if not ret:
             break
 
-        results = model.SimpleRecognizePlateByE2E(frame)
+        results = model.SimpleRecognizePlateByE2E(frame)  # 使用模型识别车牌
         for result in results:
             plate, confidence, rect, color = result
             x1, y1, x2, y2 = rect
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)  # 画车牌边框
             cv2.putText(frame, f"{plate} {color} {confidence:.2f}", (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.9, (0, 255, 0), 2)
-            display_results([result])
+                        0.9, (0, 255, 0), 2)  # 显示车牌号、颜色和置信度
+            display_results([result])  # 显示识别结果
 
-        cv2.imshow('Camera Recognition', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.imshow('Camera Recognition', frame)  # 显示视频帧
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # 按下'q'键退出
             break
-        if cv2.getWindowProperty('Camera Recognition', cv2.WND_PROP_VISIBLE) < 1:
+        if cv2.getWindowProperty('Camera Recognition', cv2.WND_PROP_VISIBLE) < 1:  # 关闭窗口时退出
             stop_event.set()
             break
 
     cap.release()
     cv2.destroyAllWindows()
 
-
+# 车牌识别应用程序类
 class LicensePlateRecognitionApp:
     def __init__(self, root):
         self.root = root
         self.root.title("车牌识别")
         self.root.state('zoomed')  # 窗口最大化
 
+        # 设置样式
         self.style = ttk.Style()
         self.style.configure('TFrame', background='#f0f0f0')
         self.style.configure('TLabel', background='#f0f0f0', font=("Arial", 12))
@@ -85,15 +86,18 @@ class LicensePlateRecognitionApp:
         self.style.configure('Treeview', font=("Arial", 12))  # 设置Treeview的字体
         self.style.configure('Treeview.Heading', font=("Arial", 14))  # 设置Treeview标题的字体
 
+        # 主框架
         self.main_frame = ttk.Frame(root)
         self.main_frame.pack(fill=BOTH, expand=True)
 
+        # 显示原图的框架
         self.label_frame = ttk.LabelFrame(self.main_frame, text="原图")
         self.label_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=20, pady=20)
 
         self.image_label = Label(self.label_frame)
         self.image_label.pack(fill=BOTH, expand=True, padx=20, pady=20)
 
+        # 显示识别结果的框架
         self.result_frame = ttk.LabelFrame(self.main_frame, text="车牌识别结果")
         self.result_frame.pack(side=RIGHT, fill=Y, padx=20, pady=20)
 
@@ -121,6 +125,7 @@ class LicensePlateRecognitionApp:
         self.result_tree.tag_configure("武警车牌", foreground="red")
         self.result_tree.tag_configure("新能源车牌", foreground="green")
 
+        # 按钮框架
         self.button_frame = ttk.Frame(root)
         self.button_frame.pack(side=BOTTOM, fill=X, padx=20, pady=20)
 
@@ -139,12 +144,14 @@ class LicensePlateRecognitionApp:
         self.progress_label = ttk.Label(self.button_frame, text="")
         self.progress_label.pack(side=BOTTOM, padx=10, pady=10)
 
+        # 初始化车牌识别模型
         self.model = pr.LPR("model/cascade.xml", "model/model12.h5", "model/ocr_plate_all_gru.h5")
         self.file_path = None
         self.source_type = None
         self.stop_event = threading.Event()
         self.result_index = 1
 
+    # 加载图片
     def load_image(self):
         self.file_path = filedialog.askopenfilename()
         if self.file_path:
@@ -152,21 +159,25 @@ class LicensePlateRecognitionApp:
             image = Image.open(self.file_path)
             self.display_image(image)
 
+    # 显示图片
     def display_image(self, image):
         image.thumbnail((self.image_label.winfo_width(), self.image_label.winfo_height()), Image.LANCZOS)
         self.image = ImageTk.PhotoImage(image)
         self.image_label.config(image=self.image)
 
+    # 加载视频
     def load_video(self):
         self.file_path = filedialog.askopenfilename()
         if self.file_path:
             self.source_type = 'video'
             self.image_label.config(text="已选择视频: " + self.file_path)
 
+    # 使用摄像头
     def use_camera(self):
         self.source_type = 'camera'
         self.image_label.config(text="使用摄像头进行实时识别。")
 
+    # 识别车牌
     def recognize_plate(self):
         self.stop_event.clear()
         self.progress_label.config(text="识别中...")
@@ -184,6 +195,7 @@ class LicensePlateRecognitionApp:
         else:
             self.progress_label.config(text="未选择有效的来源。")
 
+    # 显示识别结果
     def display_results(self, results):
         for result in results:
             plate, confidence, rect, color = result
@@ -197,6 +209,7 @@ class LicensePlateRecognitionApp:
                 self.result_index, current_time, plate, color_chinese, province_info, plate_type), tags=tags)
             self.result_index += 1
 
+    # 获取车牌类型
     def get_plate_type(self, plate, color):
         # 根据车牌号和颜色判断车牌类型
         if "红" in color or plate.startswith("WJ"):
@@ -206,6 +219,7 @@ class LicensePlateRecognitionApp:
         else:
             return "普通车牌"
 
+    # 获取省份信息
     def get_province_info(self, plate):
         # 返回省份信息
         province_map = {
@@ -249,6 +263,7 @@ class LicensePlateRecognitionApp:
         }
         return province_map.get(plate[0], "未知省份")
 
+    # 获取车牌颜色的中文描述
     def get_color_in_chinese(self, color):
         color_map = {
             "blue": "蓝色",

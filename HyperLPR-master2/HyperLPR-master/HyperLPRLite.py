@@ -4,29 +4,32 @@ from keras import backend as K
 from keras.models import *
 from keras.layers import *
 
+# 定义车牌字符集，包括中文省份简写字母、数字和英文字母等
 chars = [u"京", u"沪", u"津", u"渝", u"冀", u"晋", u"蒙", u"辽", u"吉", u"黑", u"苏", u"浙", u"皖", u"闽", u"赣", u"鲁", u"豫", u"鄂", u"湘", u"粤", u"桂",
          u"琼", u"川", u"贵", u"云", u"藏", u"陕", u"甘", u"青", u"宁", u"新", u"0", u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"A",
          u"B", u"C", u"D", u"E", u"F", u"G", u"H", u"J", u"K", u"L", u"M", u"N", u"P", u"Q", u"R", u"S", u"T", u"U", u"V", u"W", u"X",
          u"Y", u"Z",u"港",u"学",u"使",u"警",u"澳",u"挂",u"军",u"北",u"南",u"广",u"沈",u"兰",u"成",u"济",u"海",u"民",u"航",u"空"
          ]
 
-# 常见车牌颜色的HSV范围
+# 常见车牌颜色的HSV范围，用于车牌颜色检测
 color_ranges = {
     'blue': [(110, 100, 100), (130, 255, 255)],
     'green': [(35, 50, 50), (90, 255, 255)],
     'white': [(0, 0, 180), (180, 30, 255)],
-
 }
-
 
 class LPR():
     def __init__(self, model_detection, model_finemapping, model_seq_rec):
+        # 加载车牌检测的Haar级联分类器
         self.watch_cascade = cv2.CascadeClassifier(model_detection)
+        # 加载细定位模型
         self.modelFineMapping = self.model_finemapping()
         self.modelFineMapping.load_weights(model_finemapping)
+        # 加载序列识别模型
         self.modelSeqRec = self.model_seq_rec(model_seq_rec)
 
     def computeSafeRegion(self, shape, bounding_rect):
+        # 计算安全区域，确保图像裁剪不会超出边界
         top = bounding_rect[1]
         bottom = bounding_rect[1] + bounding_rect[3]
         left = bounding_rect[0]
@@ -46,10 +49,12 @@ class LPR():
         return [left, top, right-left, bottom-top]
 
     def cropImage(self, image, rect):
+        # 根据矩形区域裁剪图像
         x, y, w, h = self.computeSafeRegion(image.shape, rect)
         return image[y:y+h, x:x+w]
 
     def detectPlateRough(self, image_gray, resize_h=720, en_scale=1.08, top_bottom_padding_rate=0.05):
+        # 粗略检测车牌区域
         if top_bottom_padding_rate > 0.2:
             print("error:top_bottom_padding_rate > 0.2:", top_bottom_padding_rate)
             exit(1)
@@ -71,6 +76,7 @@ class LPR():
         return cropped_images
 
     def fastdecode(self, y_pred):
+        # 快速解码预测结果，得到车牌字符和置信度
         results = ""
         confidence = 0.0
         table_pred = y_pred.reshape(-1, len(chars)+1)
@@ -83,6 +89,7 @@ class LPR():
         return results, confidence
 
     def model_seq_rec(self, model_path):
+        # 定义序列识别模型结构，并加载模型权重
         width, height, n_len, n_class = 164, 48, 7, len(chars) + 1
         rnn_size = 256
         input_tensor = Input((164, 48, 3))
@@ -113,6 +120,7 @@ class LPR():
         return base_model
 
     def model_finemapping(self):
+        # 定义细定位模型结构
         input = Input(shape=[16, 66, 3])
         x = Conv2D(10, (3, 3), strides=1, padding='valid', name='conv1')(input)
         x = Activation("relu", name='relu1')(x)
@@ -128,6 +136,7 @@ class LPR():
         return model
 
     def finemappingVertical(self, image, rect):
+        # 垂直细定位，裁剪图像以精确对齐车牌区域
         resized = cv2.resize(image, (66, 16))
         resized = resized.astype(float)/255
         res_raw = self.modelFineMapping.predict(np.array([resized]))[0]
@@ -147,6 +156,7 @@ class LPR():
         return image, rect
 
     def recognizeOne(self, src):
+        # 识别单张车牌图像
         x_tempx = src
         x_temp = cv2.resize(x_tempx, (164, 48))
         x_temp = x_temp.transpose(1, 0, 2)
@@ -155,7 +165,7 @@ class LPR():
         return self.fastdecode(y_pred)
 
     def detect_plate_color(self, image):
-        """检测车牌颜色"""
+        # 检测车牌颜色
         hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         for color, (lower, upper) in color_ranges.items():
             mask = cv2.inRange(hsv_image, np.array(lower), np.array(upper))
@@ -164,6 +174,7 @@ class LPR():
         return "unknown"
 
     def SimpleRecognizePlateByE2E(self, image):
+        # 端到端识别车牌
         images = self.detectPlateRough(image, image.shape[0], top_bottom_padding_rate=0.1)
         res_set = []
         for j, plate in enumerate(images):
