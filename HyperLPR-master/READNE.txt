@@ -1,0 +1,25 @@
+测试图片在image_rec中，命名时不要只用数字，路径不要有中文
+运行GUI.py。HyperLPRLite.py会作为一整个大类函数出现在GUI.py中
+训练好的权重保存在model文件夹中，权重训练源码在hyperlpr_py3文件夹中
+数据库可参考开源数据集https://github.com/detectRecog/CCPD
+
+运行环境（仅供参考）：
+python3.9  
+keras2.10.0  theano1.0.5  numpy1.22.3  scipy1.7.3  opencv4.6.0  
+scikit-image0.19.3  skikit-learn1.4.2  pillow9.5.0  tensorflow2.10.0
+注：keras3.x版本可能会报错，目前没有找到更好的修改方法。
+tensorflow，Keras1.x报错时，在model_seq_rec（）函数中的GRU（）里删除reset_after=False
+
+代码算法步骤：
+1. opencv  Cascade 检测车牌大致位置
+2. 拟合车牌的上下边界
+3. CNN Regression回归车牌左右边界
+4. 车牌校正倾斜
+5. CNN滑动窗切割字符
+6. CNN识别字符
+
+使用方法：
+运行GUI.py 
+程序提供了三种功能：图片识别，视频识别和摄像头实时识别。
+在使用摄像头识别时，先点击“来自摄像头”，紧接着点击“识别车牌”
+然后开启摄像头，将需要识别的车牌对准摄像头，会自动识别。
